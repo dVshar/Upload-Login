@@ -8,3 +8,5 @@ class UsersTable(models.Model):
     password = models.CharField(max_length=256,null=True)
     is_admin = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now=True)
+
+ 

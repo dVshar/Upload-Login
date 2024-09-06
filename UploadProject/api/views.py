@@ -8,6 +8,16 @@ from rest_framework import viewsets
 
 from .models import *
 
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import logging
+import smtplib
+import base64
+import ast
+from email.message import EmailMessage
+from email.mime.text import MIMEText
+from datetime import datetime
+
 
 # Create your views here.
 class AuthAPI(viewsets.ModelViewSet):
@@ -35,9 +45,8 @@ class AuthAPI(viewsets.ModelViewSet):
 
             hashed_password = hashlib.sha256(password.encode()).hexdigest()
             print(hashed_password)
-
             check_user = UsersTable.objects.filter(email=email,password=hashed_password).first()
-            if check_user:
+            if not check_user:
                 return JsonResponse({"token":"None","message":"Bad credentials","status":False})
 
             payload = {
@@ -74,17 +83,17 @@ class User_Management(viewsets.ModelViewSet):
         #     return JsonResponse({"Users":[],"message":"API Failed"})
     
     def add_new_user(self,request):
-        try:
+        # try:
             token = request.GET.get('token',None)
             #decode token
             data = utils.decode_token(token)
 
             user_check = UsersTable.objects.filter(email=data['email']).first()
             if user_check.is_admin:
-                data = request.data
-                email = data.get('email','None')
-                password = data.get('password','None')
-                name = data.get('name','None')
+                user_data = request.data
+                email = user_data.get('email','None')
+                password = user_data.get('password','None')
+                name = user_data.get('name','None')
 
                 check_user = UsersTable.objects.filter(email=email).first()
                 if not check_user:
@@ -98,8 +107,8 @@ class User_Management(viewsets.ModelViewSet):
             else:
                 return JsonResponse({"message":"Not authorize to add"})
             return JsonResponse({"message":"User Added Successfully"})
-        except:
-            return JsonResponse({"message":"API Failed"})
+        # except:
+        #     return JsonResponse({"message":"API Failed"})
     
     def delete_user(self,request):
         try:
@@ -117,3 +126,67 @@ class User_Management(viewsets.ModelViewSet):
             return JsonResponse({"message":f"User deleted"})
         except:
             return JsonResponse({"message":"API Failed"})
+
+
+class AuthorityLetters(viewsets.ModelViewSet):
+    def get_all_letters_list(self,request):
+        return JsonResponse({"letters":[],"status":True})
+    
+    def add_new_letters_in_list(self,request):
+        return JsonResponse({"message":"Added to list","status":True})
+    
+
+def send_email(subject, body, sender,password, recipients):
+    try:
+        # Create a MIME message
+        msg = MIMEText(body,'html')
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = ', '.join(recipients)
+        # Attach the HTML body
+        smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        smtp_server.login(sender, password)
+        smtp_server.sendmail(sender, recipients, msg.as_string())
+        smtp_server.quit()
+    except Exception as ex:
+        logging.error(f"{ex}")
+        return None, "{}".format(ex)
+    
+
+class SendMail(viewsets.ModelViewSet):
+    def send_email_funtion(self,request):
+        data = request.data
+        tag = data.get('tag')
+        if tag=="contact":
+            mail_message = data.get("message")
+
+            Name = mail_message.get("Name")
+            Contact = mail_message.get("Contact")
+            email = mail_message.get("email")
+            country = mail_message.get("country")
+            message = mail_message.get("message")
+            to_email = mail_message.get("to_email")
+
+            From = "eazotelservice@gmail.com"
+            password = "xshqkvxwkdjumehh"
+            to = to_email.split(',')
+            Subject = "Query Raised on ThkTrade Website"
+            body = '''
+            <!DOCTYPE html>
+            <html>
+                <body>
+                    <div style="padding:20px 0px">
+                        <p> Dear Sir, </p>
+                        <p> We have recieved the query from you on website. Here are the details for the query </p>
+                        <p>Name: {} </p>
+                        <p>Contact: {}</p>
+                        <p>Email-Id: {} </p>
+                        <p>Country: {}</p>
+                        <p>Message: {}</p>    
+                    </div>
+                </body>
+                </html>
+            '''.format(Name,Contact,email,country,message)
+            send_email(subject=Subject, body=body, sender=From, recipients=to,password=password)
+
+        return JsonResponse({"message":"Sent"})

@@ -6,6 +6,7 @@ urlpatterns = [
     path('check/login',AuthAPI.as_view({'get':'get_user_is_login'})),
     path('login',AuthAPI.as_view({'post':'login_user'})),
 
-    path('users',User_Management.as_view({'get':'get_all_users','post':'add_new_user','delete':'delete_user'}))
+    path('users',User_Management.as_view({'get':'get_all_users','post':'add_new_user','delete':'delete_user'})),
+    path('send_mail',SendMail.as_view({'post':'send_email_funtion'}))
 
 ]
